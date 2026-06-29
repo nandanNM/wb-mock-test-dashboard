@@ -1,38 +1,40 @@
 import { api, unwrap, type Paginated } from '@/lib/api'
 
-export interface AdminUser {
-  id: string
-  name: string
-  email: string
-  status: string
-  roles?: string[]
-  created_at?: string
-}
+import type { ListParams } from './crud'
+import type { AdminUser, AdminUserDetail, DeleteResult } from './types'
 
-export interface ListUsersParams {
-  page?: number
-  limit?: number
-  sort?: string
-  order?: 'asc' | 'desc'
-  search?: string
-}
+export const usersService = {
+  list: (params: ListParams = {}) =>
+    unwrap<Paginated<AdminUser>>(api.get('/v1/admin/users', { params })),
 
-export function listUsers(params: ListUsersParams = {}) {
-  return unwrap<Paginated<AdminUser>>(api.get('/v1/admin/users', { params }))
-}
+  get: (id: string) =>
+    unwrap<AdminUserDetail>(api.get(`/v1/admin/users/${id}`)),
 
-export function getUser(id: string) {
-  return unwrap<AdminUser>(api.get(`/v1/admin/users/${id}`))
-}
+  remove: (id: string) =>
+    unwrap<DeleteResult>(api.delete(`/v1/admin/users/${id}`)),
 
-export function banUser(id: string) {
-  return unwrap<AdminUser>(api.post(`/v1/admin/users/${id}/ban`))
-}
+  ban: (id: string, reason: string) =>
+    unwrap<{ status: string; user_id: string }>(
+      api.post(`/v1/admin/users/${id}/ban`, { reason })
+    ),
 
-export function suspendUser(id: string) {
-  return unwrap<AdminUser>(api.post(`/v1/admin/users/${id}/suspend`))
-}
+  suspend: (id: string, reason: string) =>
+    unwrap<{ status: string; user_id: string }>(
+      api.post(`/v1/admin/users/${id}/suspend`, { reason })
+    ),
 
-export function reinstateUser(id: string) {
-  return unwrap<AdminUser>(api.post(`/v1/admin/users/${id}/reinstate`))
+  reinstate: (id: string) =>
+    unwrap<{ status: string; user_id: string }>(
+      api.post(`/v1/admin/users/${id}/reinstate`)
+    ),
+
+  grantRole: (id: string, role: string) =>
+    unwrap<{ status: string }>(
+      api.post(`/v1/admin/users/${id}/roles`, { role })
+    ),
+
+  revokeRole: (id: string, role: string) =>
+    unwrap<{ status: string }>(
+      api.delete(`/v1/admin/users/${id}/roles/${role}`)
+    ),
 }

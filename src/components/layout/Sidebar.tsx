@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, Users } from 'lucide-react'
+import { BookOpen, LayoutDashboard, Settings, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
     end: true,
   },
+  { label: 'Subjects', to: ROUTES.subjects, icon: BookOpen },
   { label: 'Users', to: ROUTES.users, icon: Users },
   { label: 'Settings', to: ROUTES.settings, icon: Settings },
 ]

@@ -6,6 +6,7 @@ import { ROUTES } from '@/routes/paths'
 
 const TITLES: Record<string, string> = {
   [ROUTES.dashboard]: 'Dashboard',
+  [ROUTES.subjects]: 'Subjects',
   [ROUTES.users]: 'Users',
   [ROUTES.settings]: 'Settings',
 }

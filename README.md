@@ -11,8 +11,11 @@ A clean, production-ready admin dashboard built with **React + Vite + TypeScript
 | UI framework   | React 19 + TypeScript                              |
 | Styling        | Tailwind CSS v4 (`@tailwindcss/vite`)              |
 | Components     | shadcn/ui (new-york style, slate base) + lucide    |
+| Data table     | @tanstack/react-table (server-side DataTable)      |
 | Routing        | react-router-dom v7                                |
+| State          | Zustand (auth store)                               |
 | HTTP           | axios (typed client with auth + error interceptors)|
+| Forms          | react-hook-form + zod                              |
 | Notifications  | sonner                                             |
 | Linting        | ESLint 10 (flat config) + typescript-eslint        |
 | Formatting     | Prettier                                           |
@@ -88,29 +91,41 @@ data-fetching service against `/v1/admin/users` (paginated).
 ```
 src/
 ├── components/
+│   ├── auth/        # RequirePermission (RBAC page gate)
+│   ├── data-table/  # reusable server-side DataTable + column header
 │   ├── layout/      # Sidebar, Topbar (app chrome)
 │   ├── theme/       # ThemeProvider, useTheme, ThemeToggle
 │   └── ui/          # shadcn/ui primitives
 ├── config/          # typed env access
 ├── features/
-│   └── auth/        # auth context, provider, hook, service, types
+│   ├── auth/        # useAuth hook, service (getMe), types
+│   └── subjects/    # SubjectFormDialog (create/edit)
+├── hooks/           # useServerTable (pagination/sort/search)
 ├── layouts/         # AuthLayout, DashboardLayout
-├── lib/             # api client (axios), cn() util
-├── pages/           # route screens (Login, Dashboard, NotFound, …)
+├── lib/             # api client (axios), cn(), date formatters
+├── pages/           # route screens (Login, Dashboard, Subjects, Users, …)
 ├── routes/          # router config + route guards (Protected/Public)
-├── services/        # axios data-fetching services (e.g. users)
-├── App.tsx          # provider composition + RouterProvider
+├── services/        # typed axios services per API resource + CRUD factory
+├── stores/          # Zustand stores (auth-store)
+├── App.tsx          # provider composition + bootstrap + RouterProvider
 ├── main.tsx         # entry
 └── index.css        # Tailwind v4 + shadcn slate theme tokens
 ```
 
 ## Architecture notes
 
-- **Auth** is structured around an `AuthProvider` + `useAuth()` hook. The access
-  token lives in memory (never `localStorage`); the httpOnly refresh cookie
-  restores the session on reload. An axios response interceptor performs a
-  single-flight refresh-and-retry on `401 token_expired` and clears the token on
-  other `401`s, so the route guard redirects to login.
+- **Auth** lives in a Zustand store (`stores/auth-store.ts`), surfaced through
+  the `useAuth()` hook. The access token is kept in memory (never
+  `localStorage`); the httpOnly refresh cookie restores the session on reload.
+  An axios response interceptor performs a single-flight refresh-and-retry on
+  `401 token_expired` and clears the token on other `401`s.
+- **Data fetching** uses typed axios services in `services/` (one per API
+  resource, built on a shared `createCrudService` factory). The `useServerTable`
+  hook drives the reusable `DataTable` with server-side pagination, sorting, and
+  debounced search against the backend's `{ data: { items, total, … } }` shape.
+- **RBAC** — `useAuth().can(permission)` / `hasRole(role)` come from `/v1/me`;
+  routes are wrapped in `RequirePermission` and row actions are gated inline.
+  The backend enforces permissions regardless — client checks are UX only.
 - **Routing** uses nested layout routes. `PublicRoute` keeps logged-in users
   out of `/login`; `ProtectedRoute` gates the dashboard and preserves the
   attempted URL for post-login redirect.

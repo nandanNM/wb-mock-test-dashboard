@@ -28,6 +28,7 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+      'react-hooks/incompatible-library': 'off',
     },
   },
   prettier
