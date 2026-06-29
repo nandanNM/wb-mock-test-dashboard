@@ -6,10 +6,6 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://sparksspheresoftwares.cloud/api/:path*"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

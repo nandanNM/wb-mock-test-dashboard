@@ -1,19 +1,12 @@
-export interface User {
+export interface AuthUser {
   id: string
   name: string
   email: string
-  role: 'admin' | 'user'
-  avatarUrl?: string
+  status: string
 }
 
-export interface LoginCredentials {
-  email: string
-  password: string
+export interface Me {
+  user: AuthUser
+  roles: string[]
+  permissions: string[]
 }
-
-export interface AuthSession {
-  token: string
-  user: User
-}
-
-export type AuthStatus = 'idle' | 'authenticating' | 'authenticated'

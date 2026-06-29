@@ -27,7 +27,8 @@ function initials(name: string) {
 }
 
 export function Topbar({ title }: { title: string }) {
-  const { user, logout } = useAuth()
+  const { me, logout } = useAuth()
+  const user = me?.user
   const navigate = useNavigate()
 
   async function handleLogout() {

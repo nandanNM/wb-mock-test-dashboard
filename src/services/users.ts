@@ -1,27 +1,38 @@
-import { api, unwrap } from '@/lib/api'
+import { api, unwrap, type Paginated } from '@/lib/api'
 
-export interface BackendUser {
+export interface AdminUser {
   id: string
   name: string
   email: string
-  created_at: string
+  status: string
+  roles?: string[]
+  created_at?: string
 }
 
-export interface CreateUserInput {
-  name: string
-  email: string
+export interface ListUsersParams {
+  page?: number
+  limit?: number
+  sort?: string
+  order?: 'asc' | 'desc'
+  search?: string
 }
 
-export function getUsers(limit?: number) {
-  return unwrap<BackendUser[]>(
-    api.get('/v1/users', { params: limit ? { limit } : undefined })
-  )
+export function listUsers(params: ListUsersParams = {}) {
+  return unwrap<Paginated<AdminUser>>(api.get('/v1/admin/users', { params }))
 }
 
 export function getUser(id: string) {
-  return unwrap<BackendUser>(api.get(`/v1/users/${id}`))
+  return unwrap<AdminUser>(api.get(`/v1/admin/users/${id}`))
 }
 
-export function createUser(input: CreateUserInput) {
-  return unwrap<BackendUser>(api.post('/v1/users', input))
+export function banUser(id: string) {
+  return unwrap<AdminUser>(api.post(`/v1/admin/users/${id}/ban`))
+}
+
+export function suspendUser(id: string) {
+  return unwrap<AdminUser>(api.post(`/v1/admin/users/${id}/suspend`))
+}
+
+export function reinstateUser(id: string) {
+  return unwrap<AdminUser>(api.post(`/v1/admin/users/${id}/reinstate`))
 }

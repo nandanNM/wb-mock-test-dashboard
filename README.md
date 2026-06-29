@@ -26,13 +26,31 @@ cp .env.example .env   # already present; adjust as needed
 pnpm dev               # http://localhost:5173
 ```
 
-### Demo login
+### Authentication
 
-The backend has no auth endpoint yet, so login is mocked in
-[`src/features/auth/auth-service.ts`](src/features/auth/auth-service.ts):
+Auth is **Google OAuth**, handled server-side by the backend at
+`api.wb.codernandan.in`:
 
-- **Email:** `admin@example.com`
-- **Password:** `password`
+1. **Login** is a full-page redirect to
+   `/v1/auth/google/start?client=web` (`loginWithGoogle()`).
+2. The backend completes OAuth, sets an httpOnly `refresh_token` cookie + a
+   JS-readable `csrf_token` cookie on `.codernandan.in`, then redirects back to
+   the dashboard.
+3. On app load, [`AuthProvider`](src/features/auth/AuthProvider.tsx) calls
+   `POST /v1/auth/refresh` (with credentials + `X-CSRF-Token`) to mint a 10-min
+   access token held **in memory only**, then loads the profile from `/v1/me`.
+4. The axios client retries once on `401 token_expired` (single-flight refresh).
+5. **Logout** calls `POST /v1/auth/logout`, which clears the cookies.
+
+Because the frontend and API are same-site under `*.codernandan.in`, cookies
+flow automatically — every request uses `withCredentials: true`. Local dev on
+`localhost` can't receive those cookies, so the full login flow only works on
+the deployed domain.
+
+RBAC: `useAuth()` exposes `hasRole(role)` and `can(permission)` (sourced from
+`/v1/me`); gate UI with them and pages with
+[`RequirePermission`](src/components/auth/RequirePermission.tsx). The backend
+enforces RBAC regardless — client checks are UX only.
 
 ## Scripts
 
@@ -53,20 +71,17 @@ Defined in `.env` (git-ignored) and documented in `.env.example`. Access them
 through the typed helper in [`src/config/env.ts`](src/config/env.ts) rather than
 reading `import.meta.env` directly.
 
-| Variable            | Description                  | Default           |
-| ------------------- | ---------------------------- | ----------------- |
-| `VITE_APP_NAME`     | App name shown across the UI | `Admin Dashboard` |
-| `VITE_API_BASE_URL` | Backend API base URL         | `/api`            |
-| `VITE_API_TIMEOUT`  | Per-request timeout (ms)     | `15000`           |
+| Variable           | Description                  | Default                          |
+| ------------------ | ---------------------------- | -------------------------------- |
+| `VITE_APP_NAME`    | App name shown across the UI | `Admin Dashboard`                |
+| `VITE_API_URL`     | Backend API origin           | `https://api.wb.codernandan.in`  |
+| `VITE_API_TIMEOUT` | Per-request timeout (ms)     | `15000`                          |
 
-The frontend talks to the backend through `VITE_API_BASE_URL`. In dev, Vite
-proxies `/api` → `http://localhost:8080` (see [`vite.config.ts`](vite.config.ts));
-in production, nginx proxies `/api/` → the Go backend (see
-[`deploy/nginx.conf`](deploy/nginx.conf)). The axios client in
-[`src/lib/api.ts`](src/lib/api.ts) reads the base URL, attaches the auth token,
-and unwraps the backend's `{ data }` / `{ error }` envelope. See
-[`src/services/users.ts`](src/services/users.ts) for a sample data-fetching
-service against `/v1/users`.
+The axios client in [`src/lib/api.ts`](src/lib/api.ts) calls `VITE_API_URL`
+directly with `withCredentials: true`, attaches the in-memory bearer token,
+handles single-flight refresh, and unwraps the backend's `{ data }` / `{ error }`
+envelope. See [`src/services/users.ts`](src/services/users.ts) for a sample
+data-fetching service against `/v1/admin/users` (paginated).
 
 ## Project structure
 
@@ -91,10 +106,11 @@ src/
 
 ## Architecture notes
 
-- **Auth** is structured around an `AuthProvider` + `useAuth()` hook. Swapping
-  the mock for a real backend is a one-function change in `auth-service.ts`.
-  The token is persisted to `localStorage` and attached to every request by an
-  axios interceptor; a `401` clears it and the route guard redirects to login.
+- **Auth** is structured around an `AuthProvider` + `useAuth()` hook. The access
+  token lives in memory (never `localStorage`); the httpOnly refresh cookie
+  restores the session on reload. An axios response interceptor performs a
+  single-flight refresh-and-retry on `401 token_expired` and clears the token on
+  other `401`s, so the route guard redirects to login.
 - **Routing** uses nested layout routes. `PublicRoute` keeps logged-in users
   out of `/login`; `ProtectedRoute` gates the dashboard and preserves the
   attempted URL for post-login redirect.

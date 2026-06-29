@@ -6,18 +6,24 @@ import axios, {
 
 import { env } from '@/config/env'
 
-const TOKEN_STORAGE_KEY = 'admin-dashboard.token'
+let accessToken: string | null = null
+let refreshing: Promise<boolean> | null = null
 
-export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_STORAGE_KEY)
+export function getAccessToken(): string | null {
+  return accessToken
 }
 
-export function setStoredToken(token: string | null): void {
-  if (token) {
-    localStorage.setItem(TOKEN_STORAGE_KEY, token)
-  } else {
-    localStorage.removeItem(TOKEN_STORAGE_KEY)
-  }
+export function setAccessToken(token: string | null): void {
+  accessToken = token
+}
+
+function getCookie(name: string): string {
+  return (
+    document.cookie
+      .split('; ')
+      .find((c) => c.startsWith(name + '='))
+      ?.split('=')[1] ?? ''
+  )
 }
 
 export interface ApiErrorBody {
@@ -43,30 +49,93 @@ export class ApiError extends Error {
   }
 }
 
+export interface Paginated<T> {
+  items: T[]
+  page: number
+  limit: number
+  total: number
+  total_pages: number
+}
+
 export const api: AxiosInstance = axios.create({
-  baseURL: env.apiBaseUrl,
+  baseURL: env.apiUrl,
   timeout: env.apiTimeout,
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 })
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getStoredToken()
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`)
+  if (accessToken) {
+    config.headers.set('Authorization', `Bearer ${accessToken}`)
+  } else {
+    config.headers.delete('Authorization')
   }
   return config
 })
 
+export function refresh(): Promise<boolean> {
+  if (!refreshing) {
+    refreshing = axios
+      .post<{ data: { access_token: string } }>(
+        `${env.apiUrl}/v1/auth/refresh`,
+        null,
+        {
+          withCredentials: true,
+          headers: { 'X-CSRF-Token': getCookie('csrf_token') },
+        }
+      )
+      .then((res) => {
+        accessToken = res.data.data.access_token
+        return true
+      })
+      .catch(() => {
+        accessToken = null
+        return false
+      })
+      .finally(() => {
+        refreshing = null
+      })
+  }
+  return refreshing
+}
+
+export function loginWithGoogle(): void {
+  window.location.href = `${env.apiUrl}/v1/auth/google/start?client=web`
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await api.post('/v1/auth/logout')
+  } finally {
+    accessToken = null
+  }
+}
+
+type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean }
+
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ error?: ApiErrorBody }>) => {
+  async (error: AxiosError<{ error?: ApiErrorBody }>) => {
+    const original = error.config as RetriableConfig | undefined
     const status = error.response?.status
+    const body = error.response?.data?.error
 
-    if (status === 401) {
-      setStoredToken(null)
+    if (
+      status === 401 &&
+      body?.code === 'token_expired' &&
+      original &&
+      !original._retry
+    ) {
+      original._retry = true
+      if (await refresh()) {
+        return api.request(original)
+      }
     }
 
-    const body = error.response?.data?.error
+    if (status === 401) {
+      accessToken = null
+    }
+
     if (body) {
       return Promise.reject(new ApiError(body, status))
     }

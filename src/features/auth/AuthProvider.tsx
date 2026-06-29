@@ -1,79 +1,72 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { getStoredToken, setStoredToken } from '@/lib/api'
+import { loginWithGoogle, logout as apiLogout, refresh } from '@/lib/api'
 
 import { AuthContext } from './auth-context'
-import * as authService from './auth-service'
-import type { AuthStatus, LoginCredentials, User } from './types'
+import { getMe } from './auth-service'
+import type { Me } from './types'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [status, setStatus] = useState<AuthStatus>('idle')
-  const [isInitializing, setIsInitializing] = useState(
-    () => getStoredToken() !== null
-  )
+  const [me, setMe] = useState<Me | null>(null)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   useEffect(() => {
     let cancelled = false
-    const token = getStoredToken()
 
-    if (!token) {
-      return
-    }
-
-    authService
-      .fetchCurrentUser(token)
-      .then((restored) => {
-        if (cancelled) return
-        setUser(restored)
-        setStatus('authenticated')
-      })
-      .catch(() => {
-        if (cancelled) return
-        setStoredToken(null)
-      })
-      .finally(() => {
-        if (!cancelled) setIsInitializing(false)
-      })
+    ;(async () => {
+      const ok = await refresh()
+      if (ok) {
+        try {
+          const profile = await getMe()
+          if (!cancelled) setMe(profile)
+        } catch {
+          if (!cancelled) setMe(null)
+        }
+      }
+      if (!cancelled) setIsInitializing(false)
+    })()
 
     return () => {
       cancelled = true
     }
   }, [])
 
-  const login = useCallback(async (credentials: LoginCredentials) => {
-    setStatus('authenticating')
+  const logout = useCallback(async () => {
     try {
-      const session = await authService.login(credentials)
-      setStoredToken(session.token)
-      setUser(session.user)
-      setStatus('authenticated')
-    } catch (error) {
-      setStatus('idle')
-      throw error
+      await apiLogout()
+    } finally {
+      setMe(null)
     }
   }, [])
 
-  const logout = useCallback(async () => {
-    try {
-      await authService.logout()
-    } finally {
-      setStoredToken(null)
-      setUser(null)
-      setStatus('idle')
-    }
-  }, [])
+  const hasRole = useCallback(
+    (role: string) => {
+      const roles = me?.roles ?? []
+      return roles.includes('super_admin') || roles.includes(role)
+    },
+    [me]
+  )
+
+  const can = useCallback(
+    (permission: string) => {
+      const roles = me?.roles ?? []
+      if (roles.includes('super_admin')) return true
+      return (me?.permissions ?? []).includes(permission)
+    },
+    [me]
+  )
 
   const value = useMemo(
     () => ({
-      user,
-      status,
-      isAuthenticated: status === 'authenticated' && user !== null,
+      me,
+      isAuthenticated: me !== null,
       isInitializing,
-      login,
+      login: loginWithGoogle,
       logout,
+      hasRole,
+      can,
     }),
-    [user, status, isInitializing, login, logout]
+    [me, isInitializing, logout, hasRole, can]
   )
 
   return <AuthContext value={value}>{children}</AuthContext>

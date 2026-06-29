@@ -65,13 +65,13 @@ const ACTIVITY = [
 ]
 
 export function DashboardPage() {
-  const { user } = useAuth()
+  const { me } = useAuth()
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">
-          Welcome back, {user?.name.split(' ')[0]} 👋
+          Welcome back, {me?.user.name.split(' ')[0]} 👋
         </h2>
         <p className="text-muted-foreground">
           Here&apos;s what&apos;s happening across your workspace today.

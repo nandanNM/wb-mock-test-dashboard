@@ -1,8 +1,3 @@
-import { Loader2 } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
-
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -11,110 +6,56 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { demoCredentials, useAuth } from '@/features/auth'
-import { ApiError } from '@/lib/api'
-import { ROUTES } from '@/routes/paths'
+import { useAuth } from '@/features/auth'
 
-interface LocationState {
-  from?: { pathname: string }
+function GoogleIcon() {
+  return (
+    <svg className="size-4" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.75c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.46 14.97.5 12 .5A11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 6.68 9.14 4.75 12 4.75Z"
+      />
+    </svg>
+  )
 }
 
 export function LoginPage() {
-  const { login, status } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  const [email, setEmail] = useState(demoCredentials.email)
-  const [password, setPassword] = useState(demoCredentials.password)
-  const [error, setError] = useState<string | null>(null)
-
-  const isSubmitting = status === 'authenticating'
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError(null)
-
-    try {
-      await login({ email, password })
-      const from = (location.state as LocationState | null)?.from?.pathname
-      toast.success('Welcome back!')
-      navigate(from ?? ROUTES.dashboard, { replace: true })
-    } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : 'Unable to sign in.'
-      setError(message)
-      toast.error(message)
-    }
-  }
+  const { login } = useAuth()
 
   return (
     <Card className="w-full max-w-sm">
-      <CardHeader>
+      <CardHeader className="text-center">
         <CardTitle className="text-2xl">Sign in</CardTitle>
         <CardDescription>
-          Enter your credentials to access the dashboard.
+          Continue with your Google account to access the dashboard.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={Boolean(error)}
-              required
-            />
-          </div>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={login}
+          type="button"
+        >
+          <GoogleIcon />
+          Continue with Google
+        </Button>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-foreground text-xs"
-                onClick={() =>
-                  toast.info('Password reset is not wired up yet.')
-                }
-              >
-                Forgot password?
-              </button>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              aria-invalid={Boolean(error)}
-              required
-            />
-          </div>
-
-          {error && (
-            <p className="text-destructive text-sm" role="alert">
-              {error}
-            </p>
-          )}
-
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
-          </Button>
-        </form>
-
-        <div className="bg-muted/50 text-muted-foreground mt-6 rounded-md p-3 text-xs">
-          <p className="text-foreground mb-1 font-medium">Demo credentials</p>
-          <p>Email: {demoCredentials.email}</p>
-          <p>Password: {demoCredentials.password}</p>
-        </div>
+        <p className="text-muted-foreground mt-6 text-center text-xs">
+          You&apos;ll be redirected to Google to authenticate securely.
+        </p>
       </CardContent>
     </Card>
   )
