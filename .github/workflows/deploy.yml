@@ -1,0 +1,41 @@
+name: Deploy
+
+# Build the Vite SPA on every push to main and rsync the static bundle to the
+# Hostinger VPS, where nginx serves it. Manual runs allowed via the UI button.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # API calls go to /api; nginx on the VPS proxies that to the Go backend.
+      - run: pnpm build
+        env:
+          VITE_API_BASE_URL: /api
+
+      - name: Deploy dist/ to the VPS over rsync
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/stdin "$RUNNER_TEMP/deploy_key" <<< "${{ secrets.VPS_SSH_KEY }}"
+          rsync -az --delete \
+            -e "ssh -i $RUNNER_TEMP/deploy_key -p ${{ secrets.VPS_SSH_PORT || '22' }} -o StrictHostKeyChecking=accept-new" \
+            dist/ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/admin-dashboard/"
+          rm -f "$RUNNER_TEMP/deploy_key"
