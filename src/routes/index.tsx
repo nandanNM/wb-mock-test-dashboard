@@ -1,18 +1,27 @@
 import { createBrowserRouter } from 'react-router-dom'
 
 import { RequirePermission } from '@/components/auth/RequirePermission'
+import { NAV_ENTRIES } from '@/config/resources'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
-import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
-import { PlaceholderPage } from '@/pages/PlaceholderPage'
-import { SubjectsPage } from '@/pages/SubjectsPage'
-import { UsersPage } from '@/pages/UsersPage'
 
 import { ROUTES } from './paths'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PublicRoute } from './PublicRoute'
+
+const dashboardChildren = NAV_ENTRIES.map((entry) => ({
+  index: entry.path === ROUTES.dashboard,
+  path: entry.path === ROUTES.dashboard ? undefined : entry.path,
+  element: entry.readPerm ? (
+    <RequirePermission permission={entry.readPerm}>
+      {entry.element}
+    </RequirePermission>
+  ) : (
+    entry.element
+  ),
+}))
 
 export const router = createBrowserRouter([
   {
@@ -29,29 +38,7 @@ export const router = createBrowserRouter([
     children: [
       {
         element: <DashboardLayout />,
-        children: [
-          { path: ROUTES.dashboard, element: <DashboardPage /> },
-          {
-            path: ROUTES.subjects,
-            element: (
-              <RequirePermission permission="subjects:read">
-                <SubjectsPage />
-              </RequirePermission>
-            ),
-          },
-          {
-            path: ROUTES.users,
-            element: (
-              <RequirePermission permission="users:read">
-                <UsersPage />
-              </RequirePermission>
-            ),
-          },
-          {
-            path: ROUTES.settings,
-            element: <PlaceholderPage title="Settings" />,
-          },
-        ],
+        children: dashboardChildren,
       },
     ],
   },

@@ -2,14 +2,11 @@ import { Outlet, useLocation } from 'react-router-dom'
 
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
-import { ROUTES } from '@/routes/paths'
+import { NAV_ENTRIES } from '@/config/resources'
 
-const TITLES: Record<string, string> = {
-  [ROUTES.dashboard]: 'Dashboard',
-  [ROUTES.subjects]: 'Subjects',
-  [ROUTES.users]: 'Users',
-  [ROUTES.settings]: 'Settings',
-}
+const TITLES: Record<string, string> = Object.fromEntries(
+  NAV_ENTRIES.map((entry) => [entry.path, entry.label])
+)
 
 export function DashboardLayout() {
   const { pathname } = useLocation()

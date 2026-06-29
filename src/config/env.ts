@@ -10,6 +10,9 @@ export const env = {
   appName: required('VITE_APP_NAME', 'Admin Dashboard'),
   apiUrl: required('VITE_API_URL', 'https://api.wb.codernandan.in'),
   apiTimeout: Number(import.meta.env.VITE_API_TIMEOUT ?? 15000),
+  logsUrl: import.meta.env.VITE_LOGS_URL ?? '',
+  logsUser: import.meta.env.VITE_LOGS_USER ?? '',
+  logsPassword: import.meta.env.VITE_LOGS_PASSWORD ?? '',
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,
 } as const
