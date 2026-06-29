@@ -1,7 +1,5 @@
 name: Deploy
 
-# Build the Vite SPA on every push to main and rsync the static bundle to the
-# Hostinger VPS, where nginx serves it. Manual runs allowed via the UI button.
 on:
   push:
     branches: [main]
@@ -14,6 +12,11 @@ concurrency:
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
     steps:
       - uses: actions/checkout@v4
 
@@ -26,16 +29,18 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # API calls go to /api; nginx on the VPS proxies that to the Go backend.
+      - run: pnpm lint
+
       - run: pnpm build
         env:
           VITE_API_BASE_URL: /api
 
       - name: Deploy dist/ to the VPS over rsync
+        if: ${{ env.VPS_HOST != '' }}
         run: |
           set -euo pipefail
-          install -m 600 /dev/stdin "$RUNNER_TEMP/deploy_key" <<< "${{ secrets.VPS_SSH_KEY }}"
+          install -m 600 /dev/stdin "$RUNNER_TEMP/deploy_key" <<< "$VPS_SSH_KEY"
           rsync -az --delete \
-            -e "ssh -i $RUNNER_TEMP/deploy_key -p ${{ secrets.VPS_SSH_PORT || '22' }} -o StrictHostKeyChecking=accept-new" \
-            dist/ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/admin-dashboard/"
+            -e "ssh -i $RUNNER_TEMP/deploy_key -p ${VPS_SSH_PORT:-22} -o StrictHostKeyChecking=accept-new" \
+            dist/ "$VPS_USER@$VPS_HOST:/var/www/admin-dashboard/"
           rm -f "$RUNNER_TEMP/deploy_key"
