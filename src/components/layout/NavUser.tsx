@@ -1,35 +1,42 @@
-import { LogOut, User as UserIcon } from 'lucide-react'
+import { ChevronsUpDown, LogOut, UserIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
-import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from '@/components/ui/sidebar'
 import { useAuth } from '@/features/auth'
 import { ROUTES } from '@/routes/paths'
 
 function initials(name: string) {
   return name
     .split(' ')
-    .map((part) => part[0])
+    .map((p) => p[0])
     .filter(Boolean)
     .slice(0, 2)
     .join('')
     .toUpperCase()
 }
 
-export function Topbar({ title }: { title: string }) {
+export function NavUser() {
   const { me, logout } = useAuth()
-  const user = me?.user
+  const { isMobile } = useSidebar()
   const navigate = useNavigate()
+
+  const user = me?.user
 
   async function handleLogout() {
     await logout()
@@ -38,29 +45,34 @@ export function Topbar({ title }: { title: string }) {
   }
 
   return (
-    <header className="bg-background/80 sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b px-4 backdrop-blur sm:px-6">
-      <h1 className="truncate text-lg font-semibold">{title}</h1>
-
-      <div className="flex items-center gap-2">
-        <ThemeToggle />
-
+    <SidebarMenu>
+      <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="flex h-9 items-center gap-2 px-2"
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar>
-                <AvatarFallback>
+              <Avatar className="size-8 rounded-lg">
+                <AvatarFallback className="rounded-lg">
                   {user ? initials(user.name) : '?'}
                 </AvatarFallback>
               </Avatar>
-              <span className="hidden text-sm font-medium sm:inline">
-                {user?.name}
-              </span>
-            </Button>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">{user?.name}</span>
+                <span className="text-muted-foreground truncate text-xs">
+                  {user?.email}
+                </span>
+              </div>
+              <ChevronsUpDown className="ml-auto size-4" />
+            </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            side={isMobile ? 'bottom' : 'right'}
+            align="end"
+            sideOffset={4}
+          >
             <DropdownMenuLabel className="flex flex-col">
               <span>{user?.name}</span>
               <span className="text-muted-foreground text-xs font-normal">
@@ -68,10 +80,12 @@ export function Topbar({ title }: { title: string }) {
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <UserIcon className="size-4" />
-              Profile
-            </DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuItem>
+                <UserIcon className="size-4" />
+                Profile
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={handleLogout}>
               <LogOut className="size-4" />
@@ -79,7 +93,7 @@ export function Topbar({ title }: { title: string }) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-    </header>
+      </SidebarMenuItem>
+    </SidebarMenu>
   )
 }

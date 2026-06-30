@@ -665,21 +665,33 @@ export interface NavEntry {
   path: string
   label: string
   icon: LucideIcon
+  group: string
   readPerm?: string
   element: ReactNode
 }
+
+/** Order in which sidebar groups are rendered. */
+export const NAV_GROUPS = [
+  'Overview',
+  'Content',
+  'Community',
+  'Access & Audit',
+  'System',
+] as const
 
 export const NAV_ENTRIES: NavEntry[] = [
   {
     path: '/',
     label: 'Dashboard',
     icon: LayoutDashboard,
+    group: 'Overview',
     element: <DashboardPage />,
   },
   {
     path: '/subjects',
     label: 'Subjects',
     icon: BookOpen,
+    group: 'Content',
     readPerm: 'subjects:read',
     element: <SubjectsPage />,
   },
@@ -687,6 +699,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/chapters',
     label: 'Chapters',
     icon: BookMarked,
+    group: 'Content',
     readPerm: 'chapters:read',
     element: <ResourceTable config={chaptersConfig} />,
   },
@@ -694,6 +707,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/notes',
     label: 'Chapter Notes',
     icon: FileText,
+    group: 'Content',
     readPerm: 'notes:read',
     element: <ResourceTable config={notesConfig} />,
   },
@@ -701,6 +715,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/questions',
     label: 'Questions',
     icon: ListChecks,
+    group: 'Content',
     readPerm: 'questions:read',
     element: <ResourceTable config={questionsConfig} />,
   },
@@ -708,6 +723,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/tests',
     label: 'Tests',
     icon: ClipboardList,
+    group: 'Content',
     readPerm: 'tests:read',
     element: <ResourceTable config={testsConfig} />,
   },
@@ -715,41 +731,47 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/users',
     label: 'Users',
     icon: UsersIcon,
+    group: 'Community',
     readPerm: 'users:read',
     element: <UsersPage />,
-  },
-  {
-    path: '/sessions',
-    label: 'Sessions',
-    icon: Laptop,
-    readPerm: 'sessions:read',
-    element: <ResourceTable config={sessionsConfig} />,
-  },
-  {
-    path: '/attempts',
-    label: 'Attempts',
-    icon: Target,
-    readPerm: 'attempts:read',
-    element: <ResourceTable config={attemptsConfig} />,
   },
   {
     path: '/battles',
     label: 'Battles',
     icon: Swords,
+    group: 'Community',
     readPerm: 'battles:read',
     element: <ResourceTable config={battlesConfig} />,
+  },
+  {
+    path: '/attempts',
+    label: 'Attempts',
+    icon: Target,
+    group: 'Community',
+    readPerm: 'attempts:read',
+    element: <ResourceTable config={attemptsConfig} />,
   },
   {
     path: '/follows',
     label: 'Follows',
     icon: UserPlus,
+    group: 'Community',
     readPerm: 'follows:read',
     element: <ResourceTable config={followsConfig} />,
+  },
+  {
+    path: '/sessions',
+    label: 'Sessions',
+    icon: Laptop,
+    group: 'Access & Audit',
+    readPerm: 'sessions:read',
+    element: <ResourceTable config={sessionsConfig} />,
   },
   {
     path: '/roles',
     label: 'Roles',
     icon: Shield,
+    group: 'Access & Audit',
     readPerm: 'users:read',
     element: <ResourceTable config={rolesConfig} />,
   },
@@ -757,6 +779,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/permissions',
     label: 'Permissions',
     icon: KeyRound,
+    group: 'Access & Audit',
     readPerm: 'users:read',
     element: <ResourceTable config={permissionsConfig} />,
   },
@@ -764,6 +787,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/audit',
     label: 'Audit Log',
     icon: ScrollText,
+    group: 'Access & Audit',
     readPerm: 'audit:read',
     element: <ResourceTable config={auditConfig} />,
   },
@@ -771,6 +795,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     path: '/settings',
     label: 'Settings',
     icon: SettingsIcon,
+    group: 'System',
     element: <PlaceholderPage title="Settings" />,
   },
 ]

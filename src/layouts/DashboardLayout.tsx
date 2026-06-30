@@ -1,27 +1,24 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Topbar } from '@/components/layout/Topbar'
-import { NAV_ENTRIES } from '@/config/resources'
-
-const TITLES: Record<string, string> = Object.fromEntries(
-  NAV_ENTRIES.map((entry) => [entry.path, entry.label])
-)
+import { AppSidebar } from '@/components/layout/AppSidebar'
+import { CommandMenu } from '@/components/layout/CommandMenu'
+import { Header } from '@/components/layout/Header'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { useCommandMenu } from '@/hooks/use-command-menu'
 
 export function DashboardLayout() {
-  const { pathname } = useLocation()
-  const title = TITLES[pathname] ?? 'Dashboard'
+  const { open, setOpen } = useCommandMenu()
 
   return (
-    <div className="flex h-svh overflow-hidden">
-      <Sidebar className="hidden md:flex" />
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar title={title} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <Header onSearch={() => setOpen(true)} />
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
-        </main>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+      <CommandMenu open={open} onOpenChange={setOpen} />
+    </SidebarProvider>
   )
 }
