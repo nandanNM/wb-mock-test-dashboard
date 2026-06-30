@@ -5,11 +5,15 @@ import {
   type ColumnDef,
   type OnChangeFn,
   type PaginationState,
+  type RowSelectionState,
   type SortingState,
+  type VisibilityState,
 } from '@tanstack/react-table'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
 
-import { Button } from '@/components/ui/button'
+import { DataTablePagination } from '@/components/data-table/data-table-pagination'
+import { DataTableViewOptions } from '@/components/data-table/data-table-view-options'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -32,6 +36,8 @@ interface DataTableProps<TData, TValue> {
   total?: number
   toolbar?: React.ReactNode
   emptyMessage?: string
+  selectable?: boolean
+  getRowId?: (row: TData) => string
 }
 
 export function DataTable<TData, TValue>({
@@ -46,22 +52,63 @@ export function DataTable<TData, TValue>({
   total,
   toolbar,
   emptyMessage = 'No results.',
+  selectable = false,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+
+  const selectionColumn: ColumnDef<TData, TValue> = {
+    id: 'select',
+    enableSorting: false,
+    enableHiding: false,
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && 'indeterminate')
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+        className="translate-y-[2px]"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+        className="translate-y-[2px]"
+      />
+    ),
+  }
+
+  const allColumns = selectable ? [selectionColumn, ...columns] : columns
+
   const table = useReactTable({
     data,
-    columns,
+    columns: allColumns,
     pageCount,
-    state: { pagination, sorting },
+    state: { pagination, sorting, rowSelection, columnVisibility },
     onPaginationChange,
     onSortingChange,
+    onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
+    enableRowSelection: selectable,
+    getRowId,
   })
 
   return (
     <div className="space-y-4">
-      {toolbar}
+      <div className="flex items-center gap-2">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          {toolbar}
+        </div>
+        <DataTableViewOptions table={table} />
+      </div>
 
       <div className="rounded-md border">
         <Table>
@@ -85,7 +132,7 @@ export function DataTable<TData, TValue>({
             {loading ? (
               Array.from({ length: pagination.pageSize }).map((_, i) => (
                 <TableRow key={i}>
-                  {columns.map((_col, j) => (
+                  {allColumns.map((_col, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-5 w-full" />
                     </TableCell>
@@ -111,7 +158,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={allColumns.length}
                   className="text-muted-foreground h-24 text-center"
                 >
                   {emptyMessage}
@@ -122,36 +169,12 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between gap-4">
-        <p className="text-muted-foreground text-sm">
-          {total !== undefined ? `${total} total` : ''}
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm">
-            Page {pagination.pageIndex + 1} of {Math.max(pageCount, 1)}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            className="size-8"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage() || loading}
-            aria-label="Previous page"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="size-8"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage() || loading}
-            aria-label="Next page"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
+      <DataTablePagination
+        table={table}
+        total={total}
+        loading={loading}
+        selectable={selectable}
+      />
     </div>
   )
 }

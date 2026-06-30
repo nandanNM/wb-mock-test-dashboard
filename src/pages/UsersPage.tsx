@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
+import { DataTableFacetedFilter } from '@/components/data-table/data-table-faceted-filter'
 import { DataTable } from '@/components/data-table/data-table'
 import {
   AlertDialog,
@@ -41,13 +42,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/features/auth'
 import { useServerTable } from '@/hooks/use-server-table'
@@ -258,30 +252,33 @@ export function UsersPage() {
         onSortingChange={table.setSorting}
         total={table.total}
         emptyMessage={table.error ? table.error.message : 'No users found.'}
+        selectable
+        getRowId={(u) => u.id}
         toolbar={
           <div className="flex flex-wrap items-center gap-2">
             <Input
-              placeholder="Search name or email…"
+              placeholder="Filter users…"
               value={table.search}
               onChange={(e) => table.setSearch(e.target.value)}
-              className="max-w-xs"
+              className="h-8 w-40 lg:w-56"
             />
-            <Select
-              value={(table.filters.status as string) ?? 'all'}
-              onValueChange={(v) =>
-                table.setFilter('status', v === 'all' ? undefined : v)
+            <DataTableFacetedFilter
+              title="Status"
+              options={[
+                { label: 'Active', value: 'active' },
+                { label: 'Suspended', value: 'suspended' },
+                { label: 'Banned', value: 'banned' },
+              ]}
+              selected={((table.filters.status as string) ?? '')
+                .split(',')
+                .filter(Boolean)}
+              onChange={(values) =>
+                table.setFilter(
+                  'status',
+                  values.length ? values.join(',') : undefined
+                )
               }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-                <SelectItem value="banned">Banned</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
         }
       />

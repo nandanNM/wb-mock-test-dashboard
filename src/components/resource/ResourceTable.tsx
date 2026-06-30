@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header'
+import { DataTableFacetedFilter } from '@/components/data-table/data-table-faceted-filter'
 import { DataTable } from '@/components/data-table/data-table'
 import {
   AlertDialog,
@@ -310,6 +311,12 @@ function PaginatedResourceTable<T>({ config }: { config: ResourceConfig<T> }) {
             ? table.error.message
             : `No ${config.title.toLowerCase()}.`
         }
+        selectable={config.selectable ?? true}
+        getRowId={(row) =>
+          String(
+            (row as Record<string, unknown>)[(config.idKey ?? 'id') as string]
+          )
+        }
         toolbar={<Toolbar config={config} table={table} />}
       />
 
@@ -436,28 +443,50 @@ function Toolbar<T>({
           className="max-w-xs"
         />
       )}
-      {(config.filters ?? []).map((filter) =>
-        filter.type === 'select' ? (
-          <Select
-            key={filter.key}
-            value={(table.filters[filter.key] as string) ?? 'all'}
-            onValueChange={(v) =>
-              table.setFilter(filter.key, v === 'all' ? undefined : v)
-            }
-          >
-            <SelectTrigger className={filter.width ?? 'w-44'}>
-              <SelectValue placeholder={filter.label} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{filter.label}: all</SelectItem>
-              {(filter.options ?? []).map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
+      {(config.filters ?? []).map((filter) => {
+        if (filter.type === 'faceted') {
+          const selected = ((table.filters[filter.key] as string) ?? '')
+            .split(',')
+            .filter(Boolean)
+          return (
+            <DataTableFacetedFilter
+              key={filter.key}
+              title={filter.label}
+              options={filter.options ?? []}
+              selected={selected}
+              onChange={(values) =>
+                table.setFilter(
+                  filter.key,
+                  values.length ? values.join(',') : undefined
+                )
+              }
+            />
+          )
+        }
+        if (filter.type === 'select') {
+          return (
+            <Select
+              key={filter.key}
+              value={(table.filters[filter.key] as string) ?? 'all'}
+              onValueChange={(v) =>
+                table.setFilter(filter.key, v === 'all' ? undefined : v)
+              }
+            >
+              <SelectTrigger className={filter.width ?? 'w-44'}>
+                <SelectValue placeholder={filter.label} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{filter.label}: all</SelectItem>
+                {(filter.options ?? []).map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )
+        }
+        return (
           <Input
             key={filter.key}
             placeholder={filter.label}
@@ -468,7 +497,7 @@ function Toolbar<T>({
             className={filter.width ?? 'max-w-xs'}
           />
         )
-      )}
+      })}
     </div>
   )
 }

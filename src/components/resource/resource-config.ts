@@ -19,7 +19,7 @@ export interface ResColumn<T> {
 export interface ResFilter {
   key: string
   label: string
-  type: 'text' | 'select'
+  type: 'text' | 'select' | 'faceted'
   options?: SelectOption[]
   width?: string
 }
@@ -83,6 +83,8 @@ export interface ResourceConfig<T> {
   filters?: ResFilter[]
   searchable?: boolean
   searchPlaceholder?: string
+  /** Show row-selection checkboxes. */
+  selectable?: boolean
   initialSort?: string
   initialOrder?: 'asc' | 'desc'
   fields?: ResField[]

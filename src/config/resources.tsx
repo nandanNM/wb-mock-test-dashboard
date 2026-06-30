@@ -304,7 +304,7 @@ const testsConfig: ResourceConfig<Test> = {
     {
       key: 'published',
       label: 'Status',
-      type: 'select',
+      type: 'faceted',
       options: [
         { label: 'Published', value: 'true' },
         { label: 'Draft', value: 'false' },
@@ -515,7 +515,7 @@ const battlesConfig: ResourceConfig<Battle> = {
     {
       key: 'status',
       label: 'Status',
-      type: 'select',
+      type: 'faceted',
       options: [
         { label: 'Lobby', value: 'lobby' },
         { label: 'Active', value: 'active' },
@@ -575,6 +575,7 @@ const battlesConfig: ResourceConfig<Battle> = {
 const followsConfig: ResourceConfig<Follow> = {
   title: 'Follows',
   description: 'Follower / followee relationships.',
+  selectable: false,
   readPerm: 'follows:read',
   writePerm: 'follows:read',
   initialSort: 'created_at',
