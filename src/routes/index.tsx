@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 
 import { RequirePermission } from '@/components/auth/RequirePermission'
+import { RequireRole } from '@/components/auth/RequireRole'
 import { NAV_ENTRIES } from '@/config/resources'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
@@ -11,16 +12,23 @@ import { ROUTES } from './paths'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PublicRoute } from './PublicRoute'
 
+function guard(entry: (typeof NAV_ENTRIES)[number]) {
+  let node = entry.element
+  if (entry.readPerm) {
+    node = (
+      <RequirePermission permission={entry.readPerm}>{node}</RequirePermission>
+    )
+  }
+  if (entry.requireRole) {
+    node = <RequireRole role={entry.requireRole}>{node}</RequireRole>
+  }
+  return node
+}
+
 const dashboardChildren = NAV_ENTRIES.map((entry) => ({
   index: entry.path === ROUTES.dashboard,
   path: entry.path === ROUTES.dashboard ? undefined : entry.path,
-  element: entry.readPerm ? (
-    <RequirePermission permission={entry.readPerm}>
-      {entry.element}
-    </RequirePermission>
-  ) : (
-    entry.element
-  ),
+  element: guard(entry),
 }))
 
 export const router = createBrowserRouter([

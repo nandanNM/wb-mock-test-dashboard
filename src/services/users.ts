@@ -28,6 +28,11 @@ export const usersService = {
       api.post(`/v1/admin/users/${id}/reinstate`)
     ),
 
+  setRoles: (id: string, roles: string[]) =>
+    unwrap<{ user_id: string; roles: string[] }>(
+      api.put(`/v1/admin/users/${id}/roles`, { roles })
+    ),
+
   grantRole: (id: string, role: string) =>
     unwrap<{ status: string }>(
       api.post(`/v1/admin/users/${id}/roles`, { role })

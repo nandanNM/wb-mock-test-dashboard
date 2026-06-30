@@ -158,15 +158,19 @@ export interface Follow {
 }
 
 export interface Role {
-  id: number
+  id: string
   name: string
   description?: string
 }
 
 export interface Permission {
-  id: number
+  id: string
   name: string
   description?: string
+}
+
+export interface RoleWithPermissions extends Role {
+  permissions: Permission[]
 }
 
 export interface AuditRecord {

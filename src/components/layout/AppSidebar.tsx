@@ -21,11 +21,13 @@ import { useAuth } from '@/features/auth'
 import { ROUTES } from '@/routes/paths'
 
 export function AppSidebar() {
-  const { can } = useAuth()
+  const { can, hasRole } = useAuth()
   const { pathname } = useLocation()
 
   const visible = NAV_ENTRIES.filter(
-    (item) => !item.readPerm || can(item.readPerm)
+    (item) =>
+      (!item.readPerm || can(item.readPerm)) &&
+      (!item.requireRole || hasRole(item.requireRole))
   )
 
   const showLogs = Boolean(env.logsUrl) && can('audit:read')

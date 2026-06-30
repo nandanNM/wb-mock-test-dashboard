@@ -4,6 +4,7 @@ import {
   Loader2,
   MoreHorizontal,
   RotateCcw,
+  Shield,
   Trash2,
   UserX,
 } from 'lucide-react'
@@ -43,6 +44,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { UserRolesDialog } from '@/features/access/UserRolesDialog'
 import { useAuth } from '@/features/auth'
 import { useServerTable } from '@/hooks/use-server-table'
 import { ApiError } from '@/lib/api'
@@ -61,9 +63,10 @@ const STATUS_VARIANT: Record<
 type ReasonAction = 'ban' | 'suspend'
 
 export function UsersPage() {
-  const { can } = useAuth()
+  const { can, hasRole } = useAuth()
   const canModerate = can('users:ban')
   const canDelete = can('users:delete')
+  const canManageRoles = hasRole('super_admin')
 
   const table = useServerTable<AdminUser>({
     fetcher: usersService.list,
@@ -77,6 +80,7 @@ export function UsersPage() {
   } | null>(null)
   const [reason, setReason] = useState('')
   const [deleting, setDeleting] = useState<AdminUser | null>(null)
+  const [rolesUser, setRolesUser] = useState<AdminUser | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function reinstate(user: AdminUser) {
@@ -168,7 +172,7 @@ export function UsersPage() {
       },
     ]
 
-    if (canModerate || canDelete) {
+    if (canModerate || canDelete || canManageRoles) {
       cols.push({
         id: 'actions',
         cell: ({ row }) => {
@@ -207,6 +211,12 @@ export function UsersPage() {
                     <DropdownMenuItem onSelect={() => void reinstate(user)}>
                       <RotateCcw className="size-4" />
                       Reinstate
+                    </DropdownMenuItem>
+                  )}
+                  {canManageRoles && (
+                    <DropdownMenuItem onSelect={() => setRolesUser(user)}>
+                      <Shield className="size-4" />
+                      Manage roles
                     </DropdownMenuItem>
                   )}
                   {canDelete && (
@@ -362,6 +372,13 @@ export function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <UserRolesDialog
+        open={Boolean(rolesUser)}
+        onOpenChange={(open) => !open && setRolesUser(null)}
+        user={rolesUser}
+        onSaved={table.refetch}
+      />
     </div>
   )
 }

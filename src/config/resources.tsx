@@ -23,7 +23,9 @@ import { ResourceTable } from '@/components/resource/ResourceTable'
 import type { ResourceConfig } from '@/components/resource/resource-config'
 import { Badge } from '@/components/ui/badge'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { PermissionsPage } from '@/pages/PermissionsPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
+import { RolesPage } from '@/pages/RolesPage'
 import { SubjectsPage } from '@/pages/SubjectsPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { formatDate, formatDateTime } from '@/lib/format'
@@ -35,7 +37,6 @@ import {
   followsService,
   notesService,
   questionsService,
-  rbacService,
   sessionsService,
   testsService,
   type Attempt,
@@ -46,10 +47,8 @@ import {
   type Follow,
   type Note,
   type NoteInput,
-  type Permission,
   type Question,
   type QuestionInput,
-  type Role,
   type Session,
   type Test,
   type TestInput,
@@ -612,32 +611,6 @@ const followsConfig: ResourceConfig<Follow> = {
   },
 }
 
-const rolesConfig: ResourceConfig<Role> = {
-  title: 'Roles',
-  description: 'Roles defined in the system (read-only).',
-  mode: 'bare',
-  readPerm: 'users:read',
-  columns: [
-    { key: 'name', header: 'Name' },
-    { key: 'description', header: 'Description' },
-  ],
-  bareFetch: () => rbacService.listRoles(),
-  service: { list: () => Promise.reject(new Error('bare')) },
-}
-
-const permissionsConfig: ResourceConfig<Permission> = {
-  title: 'Permissions',
-  description: 'Permission catalog (read-only).',
-  mode: 'bare',
-  readPerm: 'users:read',
-  columns: [
-    { key: 'name', header: 'Name' },
-    { key: 'description', header: 'Description' },
-  ],
-  bareFetch: () => rbacService.listPermissions(),
-  service: { list: () => Promise.reject(new Error('bare')) },
-}
-
 const auditConfig: ResourceConfig<AuditRecord> = {
   title: 'Audit Log',
   description: 'Security and admin activity events.',
@@ -668,6 +641,8 @@ export interface NavEntry {
   icon: LucideIcon
   group: string
   readPerm?: string
+  /** Restrict to a role (e.g. super_admin). Backend enforces regardless. */
+  requireRole?: string
   element: ReactNode
 }
 
@@ -773,16 +748,16 @@ export const NAV_ENTRIES: NavEntry[] = [
     label: 'Roles',
     icon: Shield,
     group: 'Access & Audit',
-    readPerm: 'users:read',
-    element: <ResourceTable config={rolesConfig} />,
+    requireRole: 'super_admin',
+    element: <RolesPage />,
   },
   {
     path: '/permissions',
     label: 'Permissions',
     icon: KeyRound,
     group: 'Access & Audit',
-    readPerm: 'users:read',
-    element: <ResourceTable config={permissionsConfig} />,
+    requireRole: 'super_admin',
+    element: <PermissionsPage />,
   },
   {
     path: '/audit',
