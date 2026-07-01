@@ -1,5 +1,16 @@
+import { Check, Copy, Loader2, Send, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -176,21 +187,78 @@ const GROUPS: [string, EndpointDef[]][] = [
 const METHOD_CLASS: Record<Method, string> = {
   GET: 'bg-sky-600 text-white',
   POST: 'bg-emerald-600 text-white',
-  PATCH: 'bg-amber-600 text-white',
+  PATCH: 'bg-amber-500 text-white',
   PUT: 'bg-violet-600 text-white',
-  DELETE: 'bg-destructive text-white',
+  DELETE: 'bg-red-600 text-white',
 }
 
 interface Result {
   status: number
+  statusText: string
   ms: number
+  size: number
   text: string
 }
 
-function statusClass(status: number) {
-  if (status >= 200 && status < 300) return 'text-emerald-600'
-  if (status === 0) return 'text-destructive'
-  return 'text-destructive'
+function statusBadgeClass(status: number) {
+  if (status >= 200 && status < 300) return 'bg-emerald-600 text-white'
+  if (status >= 400 && status < 500) return 'bg-amber-500 text-white'
+  return 'bg-red-600 text-white'
+}
+
+function formatSize(n: number) {
+  return n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`
+}
+
+function ResponsePanel({ res, onClear }: { res: Result; onClear: () => void }) {
+  const [copied, setCopied] = useState(false)
+
+  function copy() {
+    void navigator.clipboard.writeText(res.text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1200)
+  }
+
+  return (
+    <div className="overflow-hidden rounded-md border">
+      <div className="bg-muted/60 flex items-center gap-2 border-b px-2 py-1.5">
+        <Badge className={cn('rounded-sm', statusBadgeClass(res.status))}>
+          {res.status || 'ERR'}
+          {res.statusText ? ` ${res.statusText}` : ''}
+        </Badge>
+        <span className="text-muted-foreground text-xs">
+          {res.ms} ms · {formatSize(res.size)}
+        </span>
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={copy}
+            aria-label="Copy response"
+          >
+            {copied ? (
+              <Check className="size-3.5 text-emerald-600" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={onClear}
+            aria-label="Clear response"
+          >
+            <X className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+      <pre className="max-h-96 overflow-auto p-3 font-mono text-xs whitespace-pre-wrap">
+        {res.text}
+      </pre>
+    </div>
+  )
 }
 
 function EndpointCard({ ep }: { ep: EndpointDef }) {
@@ -200,6 +268,9 @@ function EndpointCard({ ep }: { ep: EndpointDef }) {
   )
   const [res, setRes] = useState<Result | null>(null)
   const [busy, setBusy] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const isDestructive = ep.m === 'DELETE'
 
   async function send() {
     setBusy(true)
@@ -210,7 +281,13 @@ function EndpointCard({ ep }: { ep: EndpointDef }) {
       try {
         data = JSON.parse(body)
       } catch {
-        setRes({ status: 0, ms: 0, text: 'Invalid JSON body.' })
+        setRes({
+          status: 0,
+          statusText: '',
+          ms: 0,
+          size: 0,
+          text: 'Invalid JSON body.',
+        })
         setBusy(false)
         return
       }
@@ -222,15 +299,20 @@ function EndpointCard({ ep }: { ep: EndpointDef }) {
         data,
         validateStatus: () => true,
       })
+      const text = JSON.stringify(r.data, null, 2)
       setRes({
         status: r.status,
+        statusText: r.statusText ?? '',
         ms: Math.round(performance.now() - started),
-        text: JSON.stringify(r.data, null, 2),
+        size: new Blob([text]).size,
+        text,
       })
     } catch (err) {
       setRes({
         status: 0,
+        statusText: '',
         ms: Math.round(performance.now() - started),
+        size: 0,
         text: err instanceof Error ? err.message : String(err),
       })
     } finally {
@@ -238,22 +320,44 @@ function EndpointCard({ ep }: { ep: EndpointDef }) {
     }
   }
 
+  function trigger() {
+    if (isDestructive) setConfirmOpen(true)
+    else void send()
+  }
+
   return (
-    <Card>
-      <CardContent className="space-y-2">
+    <Card className="py-0">
+      <CardContent className="space-y-2 p-3">
         <div className="flex items-center gap-2">
           <Badge
-            className={cn('min-w-[62px] justify-center', METHOD_CLASS[ep.m])}
+            className={cn(
+              'w-16 justify-center rounded-sm font-mono',
+              METHOD_CLASS[ep.m]
+            )}
           >
             {ep.m}
           </Badge>
           <Input
             value={path}
             onChange={(e) => setPath(e.target.value)}
-            className="font-mono text-xs"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') trigger()
+            }}
+            spellCheck={false}
+            className="h-9 font-mono text-xs"
           />
-          <Button onClick={() => void send()} disabled={busy} size="sm">
-            {busy ? '…' : 'Send'}
+          <Button
+            onClick={trigger}
+            disabled={busy}
+            size="sm"
+            className="h-9 shrink-0"
+          >
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Send className="size-4" />
+            )}
+            Send
           </Button>
         </div>
         {ep.note && <p className="text-muted-foreground text-xs">{ep.note}</p>}
@@ -261,20 +365,40 @@ function EndpointCard({ ep }: { ep: EndpointDef }) {
           <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
+            spellCheck={false}
             className="font-mono text-xs"
             rows={5}
           />
         )}
-        {res && (
-          <pre className="bg-muted max-h-80 overflow-auto rounded-md p-3 text-xs">
-            <span className={cn('font-bold', statusClass(res.status))}>
-              {res.status || 'ERR'}
-            </span>
-            <span className="text-muted-foreground">{`  ${res.ms} ms`}</span>
-            {'\n' + res.text}
-          </pre>
-        )}
+        {res && <ResponsePanel res={res} onClear={() => setRes(null)} />}
       </CardContent>
+
+      {isDestructive && (
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Run this DELETE request?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This sends a real{' '}
+                <span className="text-foreground font-mono">DELETE {path}</span>{' '}
+                to the live API and cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault()
+                  setConfirmOpen(false)
+                  void send()
+                }}
+              >
+                Send DELETE
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </Card>
   )
 }
@@ -294,35 +418,56 @@ export function ApiTesterPage() {
     ).filter(([, eps]) => eps.length)
   }, [filter])
 
+  const total = useMemo(
+    () => groups.reduce((n, [, eps]) => n + eps.length, 0),
+    [groups]
+  )
+
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">API Tester</h2>
+    <div className="mx-auto max-w-4xl space-y-5">
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-2xl font-semibold tracking-tight">API Tester</h2>
+          <Badge variant="secondary" className="font-mono">
+            {env.apiUrl}
+          </Badge>
+        </div>
         <p className="text-muted-foreground text-sm">
-          Requests run through your authenticated session ({env.apiUrl}) — the
-          access token, CSRF, and cookies are attached automatically. Fill{' '}
+          Requests run through your authenticated session — the access token,
+          CSRF, and cookies are attached automatically. Fill{' '}
           <code className="text-foreground font-mono">{'{id}'}</code>{' '}
-          placeholders in the path before sending.
+          placeholders in the path before sending. These hit the live API.
         </p>
       </div>
 
-      <Input
-        placeholder="Filter endpoints…"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        className="max-w-xs"
-      />
+      <div className="bg-background/80 sticky top-16 z-10 flex items-center gap-3 py-1 backdrop-blur">
+        <Input
+          placeholder="Filter endpoints…"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="max-w-xs"
+        />
+        <span className="text-muted-foreground text-xs">
+          {total} endpoint{total === 1 ? '' : 's'}
+        </span>
+      </div>
 
       {groups.map(([name, eps]) => (
-        <div key={name} className="space-y-2">
-          <h3 className="text-muted-foreground pt-2 text-xs font-semibold tracking-wide uppercase">
+        <section key={name} className="space-y-2">
+          <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             {name}
           </h3>
           {eps.map((ep, i) => (
             <EndpointCard key={name + i} ep={ep} />
           ))}
-        </div>
+        </section>
       ))}
+
+      {total === 0 && (
+        <p className="text-muted-foreground py-10 text-center text-sm">
+          No endpoints match “{filter}”.
+        </p>
+      )}
     </div>
   )
 }
