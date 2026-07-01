@@ -3,6 +3,7 @@ import {
   BookOpen,
   ClipboardList,
   FileText,
+  FlaskConical,
   KeyRound,
   LayoutDashboard,
   ListChecks,
@@ -22,6 +23,7 @@ import type { ReactNode } from 'react'
 import { ResourceTable } from '@/components/resource/ResourceTable'
 import type { ResourceConfig } from '@/components/resource/resource-config'
 import { Badge } from '@/components/ui/badge'
+import { ApiTesterPage } from '@/pages/ApiTesterPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { PermissionsPage } from '@/pages/PermissionsPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
@@ -766,6 +768,14 @@ export const NAV_ENTRIES: NavEntry[] = [
     group: 'Access & Audit',
     readPerm: 'audit:read',
     element: <ResourceTable config={auditConfig} />,
+  },
+  {
+    path: '/api-tester',
+    label: 'API Tester',
+    icon: FlaskConical,
+    group: 'System',
+    requireRole: 'super_admin',
+    element: <ApiTesterPage />,
   },
   {
     path: '/settings',
